@@ -8,10 +8,14 @@
 
 import Cocoa
 
+
+
 class IMServerManager: NSObject {
 
     fileprivate lazy var serverSocket : TCPServer = TCPServer(address : "0.0.0.0", port : 8585)
     fileprivate lazy var isRunning : Bool = false
+    
+    fileprivate lazy var clients : [IMClientManager] = [IMClientManager]()
 }
 
 
@@ -31,25 +35,12 @@ extension IMServerManager{
         DispatchQueue.global().async {
             
             while self.isRunning {
-                let tcpClient = self.serverSocket.accept()
+                guard let tcpClient = self.serverSocket.accept() else{ continue }
+                
+                self.handle(tcpClient)
                 
                 print("receive a client connection")
-                
-                // 第一次读取长度
-                let lengthBytes = (tcpClient?.read(4))!
-                let data = Data(bytes: lengthBytes, count: 4)
-                var length : Int = 0
-                (data as NSData).getBytes(&length, length: 4)
-                
-                //第二次读取数据
-                let dataBytes = (tcpClient?.read(length))!
-                let dataString = String(bytes: dataBytes, encoding: .utf8)!
-                print(dataString)
-                
-                
-                
-                
-                
+
             }
         }
     }
@@ -62,5 +53,17 @@ extension IMServerManager{
 
         serverSocket.close()
     }
+    
+}
+
+
+extension IMServerManager{
+
+    func handle(_ client : TCPClient) {
+        let clientMgr = IMClientManager(tcpClient: client)
+        clients.append(clientMgr)
+        clientMgr.startReadMsg()
+    }
+    
     
 }
